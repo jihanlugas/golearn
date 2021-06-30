@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"golearn/model"
-	"log"
 	"net/http"
 )
 
@@ -16,6 +15,9 @@ func Signin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
+
+	//RespondWithError(w, http.StatusNotFound, "Invalid Email or Password")
+	//return
 
 	if err := c.Signin(); err != nil {
 		switch err {
@@ -29,10 +31,15 @@ func Signin(w http.ResponseWriter, r *http.Request) {
 
 	token, err := model.GenerateToken(c.Email)
 	if err != nil {
-		log.Println("asd")
 		RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	RespondWithJSONAddToken(w, http.StatusOK, map[string]string{"result": "success"}, token)
+	RespondWithJSONAddToken(w, http.StatusOK, "Login Success", map[string]string{"result": "success"}, token)
+	return
+}
+
+func Signout(w http.ResponseWriter, r *http.Request) {
+	RespondWithJSONRemoveToken(w, http.StatusOK, "Success Logout")
+	return
 }

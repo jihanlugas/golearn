@@ -25,10 +25,10 @@ func authMiddleware(next httpHandlerFuncNext) httpHandlerFunc {
 		cookie, err := r.Cookie("token")
 		if err != nil {
 			if err == http.ErrNoCookie {
-				controller.RespondWithError(w, http.StatusUnauthorized, "Unautorized")
+				controller.RespondWithErrorLogout(w, http.StatusUnauthorized, "Unautorized")
 				return
 			}
-			controller.RespondWithError(w, http.StatusBadRequest, "Bad Request")
+			controller.RespondWithErrorLogout(w, http.StatusBadRequest, "Bad Request")
 			return
 		}
 
@@ -42,20 +42,15 @@ func authMiddleware(next httpHandlerFuncNext) httpHandlerFunc {
 
 		if err != nil {
 			if err == jwt.ErrSignatureInvalid {
-				controller.RespondWithError(w, http.StatusUnauthorized, "Unautorized")
+				controller.RespondWithErrorLogout(w, http.StatusUnauthorized, "Unautorized")
 				return
 			}
-			controller.RespondWithError(w, http.StatusBadRequest, "Bad Request")
+			controller.RespondWithErrorLogout(w, http.StatusBadRequest, "Bad Request")
 			return
 		}
 
-		//if time.Unix(claims.ExpiresAt, 0).Sub(time.Now()) < time.Second * 0 {
-		//	controller.RespondWithError(w, http.StatusUnauthorized, "Unautorized")
-		//	return
-		//}
-
 		if !tkn.Valid {
-			controller.RespondWithError(w, http.StatusUnauthorized, "Unautorized")
+			controller.RespondWithErrorLogout(w, http.StatusUnauthorized, "Unautorized")
 			return
 		}
 
@@ -67,10 +62,15 @@ func main() {
 	log.Println("Listening server at http://localhost:8010")
 	router := mux.NewRouter()
 
+	router.HandleFunc("/signout", controller.Signout).Methods("GET")
 	router.HandleFunc("/signin", controller.Signin).Methods("POST")
 
 	router.HandleFunc("/users", authMiddleware(controller.GetUsers)).Methods("GET")
 	router.HandleFunc("/user", authMiddleware(controller.CreateUser)).Methods("POST")
+
+	router.HandleFunc("/kanji", authMiddleware(controller.GetKanjis)).Methods("GET")
+	router.HandleFunc("/kanji", authMiddleware(controller.CreateKanji)).Methods("POST")
+	router.HandleFunc("/bookmarkkanji", authMiddleware(controller.BookmarkKanji)).Methods("POST")
 
 	router.Use(loggingMiddleware)
 	log.Fatal(http.ListenAndServe(":8010", router))

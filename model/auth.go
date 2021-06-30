@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"github.com/dgrijalva/jwt-go"
 	"golearn/config"
 	"time"
@@ -31,14 +32,22 @@ func (c *Credentials) Signin() error {
 
 	var u User
 
-	err := db.QueryRow("SELECT id, email, password, name, phone FROM users where email = ? AND password = ?",
-		c.Email, c.Password).Scan(&u.ID, &u.Email, &u.Password, &u.Name, &u.Phone)
+	err := db.QueryRow("SELECT id, email, password, name, phone FROM users where email = ?",
+		c.Email).Scan(&u.ID, &u.Email, &u.Password, &u.Name, &u.Phone)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	if u.Password != HashPassword(c.Password) {
+		return errors.New("Wrong password")
+	}
+
+	return nil
 }
 
 func GenerateToken(email string) (string, error) {
-	expirationTime := time.Now().Add(time.Minute * 1)
+	expirationTime := time.Now().Add(time.Minute * 60)
 	claims := &Claims{
 		Email: email,
 		StandardClaims: jwt.StandardClaims{

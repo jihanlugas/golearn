@@ -3,7 +3,6 @@ package controller
 import (
 	"encoding/json"
 	"golearn/model"
-	"log"
 	"net/http"
 	"time"
 )
@@ -20,6 +19,13 @@ type ResponseError struct {
 	Data interface{} `json:"data"`
 }
 
+type ResponseErrorLogout struct {
+	Error bool `json:"error"`
+	Message string `json:"message"`
+	Logout bool `json:"logout"`
+}
+
+
 func RespondWithError(w http.ResponseWriter, code int, message string) {
 	response := &ResponseError{
 		Error: true,
@@ -28,17 +34,34 @@ func RespondWithError(w http.ResponseWriter, code int, message string) {
 	RespondWithJSON(w, code, response)
 }
 
+func RespondWithErrorLogout(w http.ResponseWriter, code int, message string) {
+	response := &ResponseErrorLogout{
+		Error: true,
+		Message: message,
+		Logout: true,
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:       "token",
+		Value:      "",
+		Expires: 	time.Now().Add(time.Minute * 0),
+		Domain: "localhost",
+		Path: "/",
+	})
+
+	RespondWithJSON(w, code, response)
+}
+
 func RespondWithSuccess(w http.ResponseWriter, code int, c *model.Claims, message string, payload interface{}) {
 	token, err := model.GenerateToken(c.Email)
 	if err != nil {
-		log.Println("asd")
 		RespondWithError(w, http.StatusInternalServerError, err.Error())
 	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:       "token",
 		Value:      token,
-		Expires: 	time.Now().Add(time.Minute * 1),
+		Expires: 	time.Now().Add(time.Minute * 60),
 		Domain: "localhost",
 		Path: "/",
 	})
@@ -60,8 +83,9 @@ func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(response)
 }
 
-func RespondWithJSONAddToken(w http.ResponseWriter, code int, payload interface{}, token string) {
+func RespondWithJSONAddToken(w http.ResponseWriter, code int, message string, payload interface{}, token string) {
 	res := &ResponseSuccess{
+		Message: message,
 		Success: true,
 		Data: payload,
 	}
@@ -74,11 +98,29 @@ func RespondWithJSONAddToken(w http.ResponseWriter, code int, payload interface{
 	http.SetCookie(w, &http.Cookie{
 		Name:       "token",
 		Value:      token,
-		Expires: 	time.Now().Add(time.Minute * 1),
+		Expires: 	time.Now().Add(time.Minute * 60),
 		Domain: "localhost",
 		Path: "/",
 	})
 
 	w.WriteHeader(code)
 	w.Write(response)
+}
+
+func RespondWithJSONRemoveToken(w http.ResponseWriter, code int, message string) {
+	response := &ResponseSuccess{
+		Success: true,
+		Message: message,
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:       "token",
+		Value:      "",
+		Expires: 	time.Now().Add(time.Minute * 0),
+		Domain: "localhost",
+		Path: "/",
+	})
+
+	RespondWithJSON(w, code, response)
+
 }
